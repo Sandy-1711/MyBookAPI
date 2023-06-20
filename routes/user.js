@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Posts = require('../models/Posts');
 const Followers = require('../models/Followers');
 const Following = require('../models/Following');
+// const Likes=require('../models/Likes');
 const { verifyToken, verifyTokenAndAdmin, verifyTokenAndAuthorization } = require('./verifyToken');
 
 
@@ -118,6 +119,52 @@ router.get('/:id/posts', verifyTokenAndAuthorization, async function (req, res) 
 
 
 
+// //````````````````````````````````````````Add Like```````````````````````````````````
+
+
+
+
+// router.put('/:id/like/:postid',verifyTokenAndAuthorization,async function(req,res){
+//   try{
+//     const user=await User.findById(req.params.id);
+//     const username=user.username;
+//     const findUsername=await Likes.find({userid:req.params.id});
+//     const array=findUsername[0].likes;
+//     var flag=0;
+//     if(array.length===0)
+//     {
+//       flag=1;  
+//     }
+//     for(var i=0;i<array.length;i++)
+//       {
+//         if(array[i].username===username)
+//         {
+//           flag=0;
+//           break;
+//         }
+        
+//       }
+//     if(flag===0)
+//     {
+//       res.status(400).json("already present");
+//     }
+//     else{
+      
+//           const savedLike=await Likes.updateOne({userid:req.params.id},{$push:{likes:{postid:req.params.postid,username:username}}});
+//     res.status(201).json(savedLike);
+//     }
+      
+        
+      
+    
+        
+//   }
+
+//   catch(err){
+//     console.log(err);
+//   res.status(500).json(err);
+// }
+// });
 
 
 
@@ -133,16 +180,34 @@ router.get('/:id/posts', verifyTokenAndAuthorization, async function (req, res) 
 router.put('/:id/newpost', verifyTokenAndAuthorization, async function (req, res) {
     try {
         const newpost = req.body;
-        console.log(newpost);
         const savedPost = await Posts.updateOne({ id: req.params.id }, { $addToSet: { "posts": newpost } }, { upsert: true });
-        console.log(savedPost);
+      
         res.status(201).json(savedPost);
     }
     catch (err) {
         res.status(500).json(err);
-        console.log(err);
     }
 })
+
+
+//````````````````````````````````````````````````````Post removal````````````````````````````````````````````````````````````````
+
+
+
+
+router.put('/:id/removePost/:postid',verifyTokenAndAuthorization,async function(req,res){
+  try{
+    const removedPost=await Posts.updateOne({id:req.params.id},{$pull:{"posts":{_id:req.params.postid}}});
+    const removedLikes=await Likes.updateOne({userid:req.params.id},{$pull:{"likes":{postid:req.params.postid}}});
+    res.status(204).json(removedPost);
+  }
+  catch(err)
+  {
+    res.status(500).json(err);
+    
+  }
+})
+
 
 
 
@@ -214,8 +279,12 @@ router.put('/:id/unfollow/:username', verifyTokenAndAuthorization, async functio
 
 
 
-//````````````````````````````````````````````````````Get All Users````````````````````````````````````````````````````````````
 
+
+
+
+
+//````````````````````````````````````````````````````Get All Users````````````````````````````````````````````````````````````
 
 
 
@@ -229,8 +298,7 @@ router.get('/:id/finduser', verifyTokenAndAuthorization, async function (req, re
     try {
         const foundUsers = await User.find();
         if (foundUsers) {
-            const { password, ...others } = foundUsers._doc;
-            res.status(200).json(...others);
+            res.status(200).json(foundUsers);
         }
         else {
             res.status(404).json("No Users Found");
@@ -322,16 +390,17 @@ router.get('/:id/:user', verifyTokenAndAuthorization, async function (req, res) 
         const foundPosts = (await Posts.find({ id: foundUser._id }));
         const foundFollowers = (await Followers.find({ id: foundUser._id }));
         const foundFollowing = (await Following.find({ id: foundUser._id }));
+        // const foundLikes=(await Likes.find({userid:foundUser._id}));
         var isFollower = false;
         if (user.username === req.params.user) {
             isFollower = 2;
         }
         else {
 
-            var array = foundFollowing;
+            var array = foundFollowers[0].followers;
 
             for (var i = 0; i < array.length; i++) {
-                if (array[i].username === req.params.user) {
+                if (array[i].username === user.username) {
                     isFollower = true;
                     break;
                 }
@@ -340,19 +409,21 @@ router.get('/:id/:user', verifyTokenAndAuthorization, async function (req, res) 
         const numPosts = foundPosts[0].posts.length;
         const numFollowers = foundFollowers[0].followers.length;
         const numFollowing = foundFollowing[0].following.length;
+        // const likearray=foundLikes[0].likes;
         const { password, ...others } = foundUser._doc;
         if (foundUser && foundPosts && foundFollowers && foundFollowing) {
 
             res.status(200).json(
                 {
                     ...others,
-                    followers: foundFollowers,
+                    followers: foundFollowers[0].followers,
                     numfollowers: numFollowers,
-                    following: foundFollowing,
+                    following: foundFollowing[0].following,
                     numfollowing: numFollowing,
-                    posts: foundPosts,
+                    posts: foundPosts[0].posts,
                     numposts: numPosts,
                     isFollower: isFollower,
+                  // likes:likearray,
                 });
         }
 

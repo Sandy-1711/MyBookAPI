@@ -3,6 +3,7 @@ const User = require('../models/User');
 const router = require('express').Router();
 const Followers = require('../models/Followers');
 const Following = require('../models/Following');
+// const Likes=require('../models/Likes');
 const Posts = require('../models/Posts');
 const cryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
@@ -47,6 +48,7 @@ router.post('/signup', async function (req, res) {
 router.post('/login', async function (req, res) {
     try{
         const user=await User.findOne({username:req.body.username});
+
         if(!user)
         {
             res.status(401).json("user not found");
